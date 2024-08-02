@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import "../../assets/style/common/header.scss"
 import { Navbar, Container, Nav, Image, Dropdown, OverlayTrigger, Tooltip } from "react-bootstrap";
-import logo from "../../assets/images/logo.png";
+import logo from "../../assets/images/logo.svg";
 import { Link } from 'react-router-dom';
 import { useAccount, useConnect, useNetwork } from 'wagmi'
 import { InjectedConnector } from 'wagmi/connectors/injected'
@@ -41,13 +41,13 @@ const HeaderNew = () => {
         await disconnect()
     }
     useEffect(() => {
-        if (chain?.id == 90001 || chain?.id == 11155111) {
-            setNetwork(chain.name)
-            console.log(chain.name);
-        }
-        else {
-            setNetwork("Unsupported Network")
-        }
+        setNetwork(chain?.name)
+        // if (chain?.id == 90001 || chain?.id == 11155111) {
+        //     console.log(chain.name);
+        // }
+        // else {
+        //     setNetwork("Unsupported Network")
+        // }
     }, [chain])
     const handleSourceCopy = () => {
         if (copyTextSourceCode === "Copy address to clipboard") {

@@ -1,3 +1,4 @@
+import Alert from 'react-bootstrap/Alert';
 import React, { useEffect, useState } from 'react';
 import "../assets/style/deposit.scss";
 import "../assets/style/withdraw.scss";
@@ -6,7 +7,6 @@ import { Dai, Usdt, Usdc, Ethereum, Btc } from 'react-web3-icons';
 import { MdOutlineSecurity } from "react-icons/md"
 import { FaEthereum } from "react-icons/fa"
 import Web3 from 'web3';
-import toIcn from "../assets/images/logo.png"
 import { useAccount, useConnect, useNetwork, useSwitchNetwork, useBalance } from 'wagmi'
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { IoMdWallet } from "react-icons/io"
@@ -24,6 +24,10 @@ const Withdraw = () => {
   const { address, isConnected } = useAccount()
   const { chain, chains } = useNetwork()
   const [RaceBalance, setRaceBalance] = useState(0)
+  const [toAddress,setToAddress] = useState('')
+  const [showAlert,setShowAlert] = useState(false)
+  const [connectError, setConnectError] = useState(undefined)
+
   const { connect } = useConnect({
     connector: new InjectedConnector({ chains }), onError(error) {
       console.log('Error', error)
@@ -54,6 +58,8 @@ const Withdraw = () => {
       console.log('Mutate', args)
     },
     onSettled(data, error) {
+      setConnectError(error.message)
+
       console.log('Settled', { data, error })
       try {
         window.ethereum.request({
@@ -155,11 +161,15 @@ const Withdraw = () => {
             if (sendToken == "ETH") {
               const weiValue = parseInt(ethers.utils.parseEther(ethValue)._hex, 16)
               setLoader(true);
-              const response = await crossChainMessenger.withdrawETH(weiValue.toString());
+              setShowAlert(false);
+
+              const response = await crossChainMessenger.withdrawETH(weiValue.toString(),{overrides:{from:toAddress || address}});
               const logs = await response.wait();
               if (logs) {
                 setLoader(false);
                 setEthValue("");
+                setShowAlert(true);
+
               }
 
             }
@@ -320,7 +330,8 @@ const Withdraw = () => {
           <div className='deposit_price_wrap'>
             <div className='deposit_price_title'>
               <p>From</p>
-              <h5><Image src={toIcn} alt="To icn" fluid /> Race</h5>
+              {/* <h5><Image src={toIcn} alt="To icn" fluid /> Race</h5> */}
+              <p>{address}</p>
             </div>
             <div className='deposit_input_wrap'>
               <Form>
@@ -345,7 +356,9 @@ const Withdraw = () => {
           <div className='deposit_details_wrap'>
             <div className="deposit_details">
               <p>To:</p>
-              <h5><FaEthereum /> Sepolia Testnet</h5>
+              {/* <h5><FaEthereum /> Sepolia Testnet</h5> */}
+              <Form.Control type='text' value={toAddress} onChange={(e)=>{setToAddress(e.target.value)}} />
+
             </div>
             <div className='withdraw_bal_sum'>
               {sendToken == "ETH" ? <span className='input_icn'><Ethereum style={{ fontSize: '1.5rem' }} /></span> : sendToken == "DAI" ? <span className='input_icn'><Dai style={{ fontSize: '1.5rem' }} /></span> : sendToken == "USDT" ? <span className='input_icn'><Usdt style={{ fontSize: '1.5rem' }} /></span> : sendToken == "wBTC" ? <span className='input_icn'><Btc style={{ fontSize: '1.5rem' }} /></span> : <span className='input_icn'><Usdc style={{ fontSize: '1.5rem' }} /></span>}
@@ -360,8 +373,14 @@ const Withdraw = () => {
                 <button className='btn deposit_btn' onClick={handleWithdraw} disabled={loader ? true : false}>{loader ? <Spinner animation="border" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </Spinner> : "Withdraw"}</button>}
+            {showAlert && (
+                <Alert variant="success" style={{marginTop:15}}>
+                    <Alert.Link href="/account/withdraw">Click to view new withdraw.</Alert.Link>
+                </Alert>
+            )}
           </div>
           {metaMastError && <small className="d-block text-danger text-center mt-2">{metaMastError}</small>}
+          {connectError && <small className="d-block text-danger text-center mt-2">{connectError}</small>}
         </section>
       </div>
     </>

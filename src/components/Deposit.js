@@ -1,8 +1,8 @@
+import Alert from 'react-bootstrap/Alert';
 import React, { useState, useEffect } from 'react';
 import "../assets/style/deposit.scss";
 import { Form, Spinner, Image } from "react-bootstrap"
 import { Dai, Usdt, Usdc, Ethereum, Btc } from 'react-web3-icons';
-import toIcn from "../assets/images/logo.png"
 import { IoMdWallet } from "react-icons/io"
 import { FaEthereum } from "react-icons/fa"
 import { useAccount, useConnect, useNetwork, useSwitchNetwork, useBalance, useToken } from 'wagmi'
@@ -22,6 +22,9 @@ const Deposit = () => {
     const [loader, setLoader] = useState(false)
     const { chain, chains } = useNetwork()
     const [checkMetaMask, setCheckMetaMask] = useState("");
+    const [toAddress,setToAddress] = useState('')
+    const [showAlert,setShowAlert] = useState(false)
+    const [connectError, setConnectError] = useState(undefined)
 
     const { connect, connectors, error, isLoading, pendingConnector } = useConnect({
         connector: new InjectedConnector({ chains }), onError(error) {
@@ -51,6 +54,8 @@ const Deposit = () => {
             console.log('Mutate', args)
         },
         onSettled(data, error) {
+            setConnectError(error.message)
+
             console.log('Settled', { data, error })
         },
         onSuccess(data) {
@@ -60,7 +65,6 @@ const Deposit = () => {
 
 
     const { data } = useBalance({ address: address, watch: true, chainId: Number(process.env.REACT_APP_L1_CHAIN_ID) })
-
 
     const dataUSDT = useBalance({ address: address, token: process.env.REACT_APP_L1_USDT, watch: true, chainId: Number(process.env.REACT_APP_L1_CHAIN_ID) })
     const dataDAI = useBalance({ address: address, token: process.env.REACT_APP_L1_DAI, watch: true, chainId: Number(process.env.REACT_APP_L1_CHAIN_ID) })
@@ -87,6 +91,7 @@ const Deposit = () => {
                     const l2Provider = new ethers.providers.JsonRpcProvider(l2Url, 'any')
                     const l1Signer = l1Provider.getSigner(address)
                     const l2Signer = l2Provider.getSigner(address)
+                 
                     const zeroAddr = "0x".padEnd(42, "0");
                     const l1Contracts = {
                         StateCommitmentChain: zeroAddr,
@@ -122,14 +127,18 @@ const Deposit = () => {
                         bedrock: true,
                     })
                     if (sendToken === "ETH") {
-                        console.log(sendToken);
                         const weiValue = parseInt(ethers.utils.parseEther(ethValue)._hex, 16)
                         setLoader(true);
-                        var depositETHEREUM = await crossChainMessenger.depositETH(weiValue.toString())
+                        setShowAlert(false);
+
+                        var depositETHEREUM = await crossChainMessenger.depositETH(weiValue.toString(),{overrides:{from: toAddress || address}})
+                        // var depositETHEREUM = await crossChainMessenger.depositETHTo('11',weiValue.toString())
                         const receiptETH = await depositETHEREUM.wait()
                         if (receiptETH) {
                             setLoader(false);
                             setEthValue("")
+                            setShowAlert(true);
+                            
                         }
                     }
                     if (sendToken === "DAI") {
@@ -184,6 +193,7 @@ const Deposit = () => {
 
 
                 }
+
             }
         } catch (error) {
             console.log(error)
@@ -250,27 +260,22 @@ const Deposit = () => {
             <div className='bridge_wrap'>
                 <TabMenu />
                 <section className='deposit_wrap'>
+                    <Form>
                     <div className='deposit_price_wrap'>
                         <div className='deposit_price_title'>
                             <p>From</p>
-                            <h5><FaEthereum /> Sepolia Testnet</h5>
+                            <h5>{chain?.name}</h5>
                         </div>
                         <div className='deposit_input_wrap'>
-                            <Form>
                                 <div className='deposit_inner_input'>
                                     <Form.Control type='number' value={ethValue} onChange={handleChange} placeholder="0" min="0" step="any" />
                                     <Form.Select aria-label="Default select example" className='select_wrap' onChange={({ target }) => setSendToken(target.value)}>
                                         <option>ETH</option>
-                                        <option value="DAI">DAI</option>
-                                        <option value="USDC">USDC</option>
-                                        <option value="USDT">USDT</option>
-                                        <option value="wBTC">wBTC</option>
                                     </Form.Select>
                                 </div>
                                 <div className='input_icn_wrap'>
                                     {sendToken == "ETH" ? <span className='input_icn'><Ethereum style={{ fontSize: '1.5rem' }} /></span> : sendToken == "DAI" ? <span className='input_icn'><Dai style={{ fontSize: '1.5rem' }} /></span> : sendToken == "USDT" ? <span className='input_icn'><Usdt style={{ fontSize: '1.5rem' }} /></span> : sendToken == "wBTC" ? <span className='input_icn'><Btc style={{ fontSize: '1.5rem' }} /></span> : <span className='input_icn'><Usdc style={{ fontSize: '1.5rem' }} /></span>}
                                 </div>
-                            </Form>
                         </div>
                         {errorInput && <small className='text-danger'>{errorInput}</small>}
                         {sendToken == 'ETH' ? address && <p className='wallet_bal mt-2'>Balance: {Number(data?.formatted).toFixed(5)} ETH</p> : sendToken == 'USDT' ? address && <p className='wallet_bal mt-2'>Balance: {Number(dataUSDT.data?.formatted).toFixed(5)} USDT</p> : sendToken == 'DAI' ? address && <p className='wallet_bal mt-2'>Balance: {Number(dataDAI.data?.formatted).toFixed(5)} DAI</p> : sendToken == 'wBTC' ? address && <p className='wallet_bal mt-2'>Balance: {Number(datawBTC.data?.formatted).toFixed(5)} wBTC</p> : address && <p className='wallet_bal mt-2'>Balance: {Number(dataUSDC.data?.formatted).toFixed(5)} USDC</p>}
@@ -279,19 +284,29 @@ const Deposit = () => {
                     <div className='deposit_details_wrap'>
                         <div className="deposit_details">
                             <p>To</p>
-                            <h5><Image src={toIcn} alt="To icn" fluid /> Race</h5>
+                            {/* <h5><Image src={toIcn} alt="To icn" fluid /> Race</h5> */}
+                            <Form.Control type='text' value={toAddress} onChange={(e)=>{setToAddress(e.target.value)}} />
+                    
                         </div>
                         <div className='deposit_inner_details'>
                             {sendToken == "ETH" ? <span className='input_icn'> <Ethereum style={{ fontSize: '1.5rem' }} /></span> : sendToken == "DAI" ? <span className='input_icn'><Dai style={{ fontSize: '1.5rem' }} /></span> : sendToken == "USDT" ? <span className='input_icn'> <Usdt style={{ fontSize: '1.5rem' }} /></span> : sendToken == "wBTC" ? <span className='input_icn'> <Btc style={{ fontSize: '1.5rem' }} /></span> : <span className='input_icn'> <Usdc style={{ fontSize: '1.5rem' }} /></span>}  <p> You’ll receive: {ethValue ? ethValue : "0"} {sendToken}</p>
                         </div>
                     </div>
+                    </Form>
                     <div className="deposit_btn_wrap">
-                        {checkMetaMask === true ? <a className='btn deposit_btn' href='https://metamask.io/' target='_blank'><Image src={metamask} alt="metamask icn" fluid /> Please Install Metamask Wallet</a> : !isConnected ? <button className='btn deposit_btn' onClick={() => connect()}><IoMdWallet />Connect Wallet</button> : chain.id !== Number(process.env.REACT_APP_L1_CHAIN_ID) ? <button className='btn deposit_btn' onClick={handleSwitch}><HiSwitchHorizontal />Switch to Sepolia</button> :
+                        {checkMetaMask === true ? <a className='btn deposit_btn' href='https://metamask.io/' target='_blank'><Image src={metamask} alt="metamask icn" fluid /> Please Install Metamask Wallet</a> : !isConnected ? <button className='btn deposit_btn' onClick={() => connect()}><IoMdWallet />Connect Wallet</button> : chain.id !== Number(process.env.REACT_APP_L1_CHAIN_ID) ? <button className='btn deposit_btn' onClick={handleSwitch}><HiSwitchHorizontal />Switch to {chain?.name}</button> :
                             checkDisabled ? <button className='btn deposit_btn' disabled={true}>Deposit</button> :
                                 <button className='btn deposit_btn' onClick={handleDeposit} disabled={loader ? true : false}> {loader ? <Spinner animation="border" role="status">
                                     <span className="visually-hidden">Loading...</span>
                                 </Spinner> : "Deposit"} </button>}
                     </div>
+                    {showAlert && (
+                        <Alert variant="success" style={{marginTop:15}}>
+                            <Alert.Link href="/account/deposit">Click to view new deposit.</Alert.Link>
+                        </Alert>
+                    )}
+                    {connectError && <small className="d-block text-danger text-center mt-2">{connectError}</small>}
+
                 </section>
             </div>
         </>

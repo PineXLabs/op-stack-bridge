@@ -11,6 +11,31 @@ import { configureChains } from '@wagmi/core'
 import { sepolia } from '@wagmi/core/chains'
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
 import { MetaMaskConnector } from 'wagmi/connectors/metaMask'
+
+export const L1 = {
+    id: Number(process.env.REACT_APP_L1_CHAIN_ID),
+    name: "L1 900 Testnet",
+    network: "L1",
+    iconUrl: "https://i.imgur.com/Q3oIdip.png",
+    iconBackground: "#000000",
+    nativeCurrency: {
+        decimals: 18,
+        name: 'ETHEREUM',
+        symbol: 'ETH'
+    },
+    rpcUrls: {
+        default: {
+            http: [String(process.env.REACT_APP_L1_RPC_URL)]
+        },
+    },
+    blockExplorers: {
+        default: { name: "RACE Testnet Explorer", url: process.env.REACT_APP_L1_EXPLORER_URL }
+    },
+    testnet: true
+
+}
+
+
 export const RACE = {
     id: Number(process.env.REACT_APP_L2_CHAIN_ID),
     name: "RACE Testnet",
@@ -35,7 +60,7 @@ export const RACE = {
 }
 
 const { chains, publicClient } = configureChains(
-    [sepolia, RACE],
+    [L1, RACE],
     [
         jsonRpcProvider({
             rpc: chain => ({ http: chain.rpcUrls.default.http[0] })

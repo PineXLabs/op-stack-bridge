@@ -60,6 +60,7 @@ const WithdrawAccount = () => {
         const l2Url = String(process.env.REACT_APP_L2_RPC_URL)
         const l2Provider = new ethers.providers.JsonRpcProvider(l2Url)
         const data = await getCrossChainMessenger.getWithdrawalsByAddress(address)
+        console.log(data)
         for (let index = 0; index < data.length; index++) {
             let timestamp = (await l2Provider.getBlock(data[index].blockNumber)).timestamp;
             let getStatus = await getCrossChainMessenger.getMessageStatus(data[index].transactionHash)
@@ -148,8 +149,8 @@ const WithdrawAccount = () => {
 
     useEffect(() => {
         if (isConnected) {
-            if (chain.id !== 11155111) {
-                switchNetwork(process.env.REACT_APP_L1_CHAIN_ID)
+            if (chain.id.toString() !== process.env.REACT_APP_L1_CHAIN_ID.toString()) {
+                switchNetwork?.(process.env.REACT_APP_L1_CHAIN_ID)
             } else {
                 getWithdraw()
             }

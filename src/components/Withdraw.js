@@ -88,6 +88,7 @@ const Withdraw = () => {
       }
     },
     onSuccess(data) {
+      setConnectError(undefined)
       console.log('Success', data)
 
     },

@@ -59,6 +59,7 @@ const Deposit = () => {
             console.log('Settled', { data, error })
         },
         onSuccess(data) {
+            setConnectError(undefined)
             console.log('Success', data)
         },
     })
